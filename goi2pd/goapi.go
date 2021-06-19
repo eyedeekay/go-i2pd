@@ -2,19 +2,29 @@ package i2pd
 
 import (
 	"strings"
+	"os"
 	"log"
 	"github.com/eyedeekay/i2pd/libi2pd"
 )
 
-func InitI2P(argv []string, name string) {
-	args := strings.Join(argv, " ")
-	log.Println(args)
-	api.C_InitI2P(len(argv), args, name)
+var argv string
+
+func InitI2P(args []string, name string) {
+	argv = strings.Join(os.Args, "")
+	api.C_InitI2P(len(os.Args), argv, "go-i2pd")
+
+//	api.C_StartI2P()
+
+//	time.Sleep(time.Hour)
+
+//	api.C_StopI2P()
 }
 
 func InitI2PSAM() {
-	args := "--datadir=go-i2pd-data"
-	api.C_InitI2P(1, args, "go-i2pd")
+	args := append(os.Args, "--datadir=_goi2pd", "--sam.enabled=1", "--sam.address=127.0.0.1", "--sam.port=7656") //"--datadir=go-i2pd-data"
+	argv = strings.Join(args, " ")
+	log.Println(argv)
+	api.C_InitI2P(len(args), argv, "go-i2pd")
 }
 
 func StartI2P() {
