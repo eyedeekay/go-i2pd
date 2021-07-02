@@ -6,3 +6,5 @@ github.com/eyedeekay/i2pd v0.3.0-1stbinrelease.0.20210618212431-682dc2bb01d4 h1:
 github.com/eyedeekay/i2pd v0.3.0-1stbinrelease.0.20210618212431-682dc2bb01d4/go.mod h1:4qJhWn+yNrWRbqFHhU8kl7JgbcW1hm3PMgvlPlxO3gg=
 github.com/eyedeekay/i2pd v0.3.0-1stbinrelease.0.20210702144755-abee29719d57 h1:Kz/K0PDNv7eO9oT02Wj6utGYqC1uks2IZ1dGEhcOf3A=
 github.com/eyedeekay/i2pd v0.3.0-1stbinrelease.0.20210702144755-abee29719d57/go.mod h1:4qJhWn+yNrWRbqFHhU8kl7JgbcW1hm3PMgvlPlxO3gg=
+github.com/eyedeekay/i2pd v0.3.0-1stbinrelease.0.20210702172028-5d01ee95810a h1:dALePX8FUwdy71vN77GMEc/B1Otu5dRGkDlb7maULfQ=
+github.com/eyedeekay/i2pd v0.3.0-1stbinrelease.0.20210702172028-5d01ee95810a/go.mod h1:4qJhWn+yNrWRbqFHhU8kl7JgbcW1hm3PMgvlPlxO3gg=

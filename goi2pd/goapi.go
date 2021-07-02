@@ -1,7 +1,7 @@
 package i2pd
 
 import (
-	"github.com/eyedeekay/i2pd/libi2pd_wrapper"
+	"github.com/eyedeekay/go-i2pd/i2pd/libi2pd_wrapper"
 	"log"
 	"os"
 	"strings"
