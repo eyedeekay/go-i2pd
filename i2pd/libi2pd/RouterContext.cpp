@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2013-2020, The PurpleI2P Project
+* Copyright (c) 2013-2021, The PurpleI2P Project
 *
 * This file is part of Purple i2pd project and licensed under BSD3
 *
@@ -43,11 +43,8 @@ namespace i2p
 		m_Decryptor = m_Keys.CreateDecryptor (nullptr);
 		m_TunnelDecryptor = m_Keys.CreateDecryptor (nullptr);
 		UpdateRouterInfo ();
-		if (IsECIES ())
-		{
-			i2p::crypto::InitNoiseNState (m_InitialNoiseState, GetIdentity ()->GetEncryptionPublicKey ());
-			m_ECIESSession = std::make_shared<i2p::garlic::RouterIncomingRatchetSession>(m_InitialNoiseState);
-		}
+		i2p::crypto::InitNoiseNState (m_InitialNoiseState, GetIdentity ()->GetEncryptionPublicKey ());
+		m_ECIESSession = std::make_shared<i2p::garlic::RouterIncomingRatchetSession>(m_InitialNoiseState);
 	}
 
 	void RouterContext::CreateNewRouter ()
@@ -569,10 +566,10 @@ namespace i2p
 			{
 				bool ntcp2; i2p::config::GetOption("ntcp2.enabled", ntcp2);
 				bool ntcp2Published; i2p::config::GetOption("ntcp2.published", ntcp2Published);
-				if (ntcp2) 
+				if (ntcp2)
 				{
 					if (ntcp2Published)
-					{	
+					{
 						std::string ntcp2Host;
 						if (!i2p::config::IsDefault ("ntcp2.addressv6"))
 							i2p::config::GetOption ("ntcp2.addressv6", ntcp2Host);
@@ -581,7 +578,7 @@ namespace i2p
 						uint16_t ntcp2Port; i2p::config::GetOption ("ntcp2.port", ntcp2Port);
 						if (!ntcp2Port) ntcp2Port = port;
 						m_RouterInfo.AddNTCP2Address (m_NTCP2Keys->staticPublicKey, m_NTCP2Keys->iv, boost::asio::ip::address::from_string (ntcp2Host), ntcp2Port);
-					}	
+					}
 					else
 						m_RouterInfo.AddNTCP2Address (m_NTCP2Keys->staticPublicKey, m_NTCP2Keys->iv, boost::asio::ip::address(), 0, i2p::data::RouterInfo::eV6);
 				}
@@ -821,9 +818,9 @@ namespace i2p
 		i2p::HandleI2NPMessage (CreateI2NPMessage (buf, GetI2NPMessageLength (buf, len)));
 	}
 
-	bool RouterContext::HandleCloveI2NPMessage (I2NPMessageType typeID, const uint8_t * payload, size_t len)
+	bool RouterContext::HandleCloveI2NPMessage (I2NPMessageType typeID, const uint8_t * payload, size_t len, uint32_t msgID)
 	{
-		auto msg = CreateI2NPMessage (typeID, payload, len);
+		auto msg = CreateI2NPMessage (typeID, payload, len, msgID);
 		if (!msg) return false;
 		i2p::HandleI2NPMessage (msg);
 		return true;
@@ -833,23 +830,22 @@ namespace i2p
 	void RouterContext::ProcessGarlicMessage (std::shared_ptr<I2NPMessage> msg)
 	{
 		std::unique_lock<std::mutex> l(m_GarlicMutex);
-		if (IsECIES ())
+		uint8_t * buf = msg->GetPayload ();
+		uint32_t len = bufbe32toh (buf);
+		if (len > msg->GetLength ())
 		{
-			uint8_t * buf = msg->GetPayload ();
-			uint32_t len = bufbe32toh (buf);
-			if (len > msg->GetLength ())
-			{
-				LogPrint (eLogWarning, "Router: garlic message length ", len, " exceeds I2NP message length ", msg->GetLength ());
-				return;
-			}
-			buf += 4;
+			LogPrint (eLogWarning, "Router: garlic message length ", len, " exceeds I2NP message length ", msg->GetLength ());
+			return;
+		}
+		buf += 4;
+		if (!HandleECIESx25519TagMessage (buf, len)) // try tag first
+		{
+			// then Noise_N one-time decryption
 			if (m_ECIESSession)
 				m_ECIESSession->HandleNextMessage (buf, len);
 			else
 				LogPrint (eLogError, "Router: Session is not set for ECIES router");
 		}
-		else
-			i2p::garlic::GarlicDestination::ProcessGarlicMessage (msg);
 	}
 
 	void RouterContext::ProcessDeliveryStatusMessage (std::shared_ptr<I2NPMessage> msg)
@@ -874,32 +870,23 @@ namespace i2p
 		return std::chrono::duration_cast<std::chrono::seconds> (std::chrono::steady_clock::now() - m_StartupTime).count ();
 	}
 
-	bool RouterContext::Decrypt (const uint8_t * encrypted, uint8_t * data, BN_CTX * ctx, i2p::data::CryptoKeyType preferredCrypto) const
+	bool RouterContext::Decrypt (const uint8_t * encrypted, uint8_t * data, i2p::data::CryptoKeyType preferredCrypto) const
 	{
-		return m_Decryptor ? m_Decryptor->Decrypt (encrypted, data, ctx, true) : false;
+		return m_Decryptor ? m_Decryptor->Decrypt (encrypted, data) : false;
 	}
 
 	bool RouterContext::DecryptTunnelBuildRecord (const uint8_t * encrypted, uint8_t * data)
 	{
-		if (IsECIES ())
-			return DecryptECIESTunnelBuildRecord (encrypted, data, ECIES_BUILD_REQUEST_RECORD_CLEAR_TEXT_SIZE);
-		else
-		{
-			if (!m_TunnelDecryptor) return false;	
-			BN_CTX * ctx = BN_CTX_new ();
-			bool success = m_TunnelDecryptor->Decrypt (encrypted, data, ctx, false);
-			BN_CTX_free (ctx);
-			return success;
-		}
+		return DecryptECIESTunnelBuildRecord (encrypted, data, ECIES_BUILD_REQUEST_RECORD_CLEAR_TEXT_SIZE);
 	}
 
 	bool RouterContext::DecryptECIESTunnelBuildRecord (const uint8_t * encrypted, uint8_t * data, size_t clearTextSize)
-	{	
+	{
 		// m_InitialNoiseState is h = SHA256(h || hepk)
 		m_CurrentNoiseState = m_InitialNoiseState;
 		m_CurrentNoiseState.MixHash (encrypted, 32); // h = SHA256(h || sepk)
 		uint8_t sharedSecret[32];
-		if (!m_TunnelDecryptor->Decrypt (encrypted, sharedSecret, nullptr, false))
+		if (!m_TunnelDecryptor->Decrypt (encrypted, sharedSecret))
 		{
 			LogPrint (eLogWarning, "Router: Incorrect ephemeral public key");
 			return false;
@@ -908,7 +895,7 @@ namespace i2p
 		encrypted += 32;
 		uint8_t nonce[12];
 		memset (nonce, 0, 12);
-		if (!i2p::crypto::AEADChaCha20Poly1305 (encrypted, clearTextSize, m_CurrentNoiseState.m_H, 32, 
+		if (!i2p::crypto::AEADChaCha20Poly1305 (encrypted, clearTextSize, m_CurrentNoiseState.m_H, 32,
 			m_CurrentNoiseState.m_CK + 32, nonce, data, clearTextSize, false)) // decrypt
 		{
 			LogPrint (eLogWarning, "Router: Tunnel record AEAD decryption failed");
@@ -920,15 +907,9 @@ namespace i2p
 
 	bool RouterContext::DecryptTunnelShortRequestRecord (const uint8_t * encrypted, uint8_t * data)
 	{
-		if (IsECIES ())
-			return DecryptECIESTunnelBuildRecord (encrypted, data, SHORT_REQUEST_RECORD_CLEAR_TEXT_SIZE);
-		else
-		{
-			LogPrint (eLogWarning, "Router: Can't decrypt short request record on non-ECIES router");
-			return false;
-		}	 
-	}	
-		
+		return DecryptECIESTunnelBuildRecord (encrypted, data, SHORT_REQUEST_RECORD_CLEAR_TEXT_SIZE);
+	}
+
 	i2p::crypto::X25519Keys& RouterContext::GetStaticKeys ()
 	{
 		if (!m_StaticKeys)

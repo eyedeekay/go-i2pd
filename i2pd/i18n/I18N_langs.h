@@ -65,27 +65,32 @@ namespace i18n
 
 	struct langData
 	{
-		std::string LocaleName; //localized name
+		std::string LocaleName; // localized name
+		std::string ShortCode;  // short language code, like "en"
 		std::function<std::shared_ptr<const i2p::i18n::Locale> (void)> LocaleFunc;
 	};
 
 	// Add localization here with language name as namespace
 	namespace afrikaans { std::shared_ptr<const i2p::i18n::Locale> GetLocale (); }
+	namespace armenian  { std::shared_ptr<const i2p::i18n::Locale> GetLocale (); }
 	namespace english   { std::shared_ptr<const i2p::i18n::Locale> GetLocale (); }
 	namespace russian   { std::shared_ptr<const i2p::i18n::Locale> GetLocale (); }
 	namespace turkmen   { std::shared_ptr<const i2p::i18n::Locale> GetLocale (); }
 	namespace ukrainian { std::shared_ptr<const i2p::i18n::Locale> GetLocale (); }
+	namespace uzbek     { std::shared_ptr<const i2p::i18n::Locale> GetLocale (); }
 
 	/**
 	 * That map contains international language name lower-case and name in it's language
 	 */
 	static std::map<std::string, langData> languages
 	{
-		{ "afrikaans", {"Afrikaans", i2p::i18n::afrikaans::GetLocale} },
-		{ "english", {"English", i2p::i18n::english::GetLocale} },
-		{ "russian", {"русский язык", i2p::i18n::russian::GetLocale} },
-		{ "turkmen", {"türkmen dili", i2p::i18n::turkmen::GetLocale} },
-		{ "ukrainian", {"украї́нська мо́ва", i2p::i18n::ukrainian::GetLocale} },
+		{ "afrikaans", {"Afrikaans", "af", i2p::i18n::afrikaans::GetLocale} },
+		{ "armenian", {"հայերէն", "hy", i2p::i18n::armenian::GetLocale} },
+		{ "english", {"English", "en", i2p::i18n::english::GetLocale} },
+		{ "russian", {"русский язык", "ru", i2p::i18n::russian::GetLocale} },
+		{ "turkmen", {"türkmen dili", "tk", i2p::i18n::turkmen::GetLocale} },
+		{ "ukrainian", {"украї́нська мо́ва", "uk", i2p::i18n::ukrainian::GetLocale} },
+		{ "uzbek", {"Oʻzbek", "uz", i2p::i18n::uzbek::GetLocale} },
 	};
 
 } // i18n

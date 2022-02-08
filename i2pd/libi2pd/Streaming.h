@@ -111,11 +111,11 @@ namespace stream
 			buf = new uint8_t[len];
 			memcpy (buf, b, len);
 		}
-		SendBuffer (size_t l): // creat empty buffer
-			len(l), offset (0)	
+		SendBuffer (size_t l): // create empty buffer
+			len(l), offset (0)
 		{
 			buf = new uint8_t[len];
-		}	
+		}
 		~SendBuffer ()
 		{
 			delete[] buf;
@@ -152,7 +152,8 @@ namespace stream
 		eStreamStatusOpen,
 		eStreamStatusReset,
 		eStreamStatusClosing,
-		eStreamStatusClosed
+		eStreamStatusClosed,
+		eStreamStatusTerminated
 	};
 
 	class StreamingDestination;
@@ -178,6 +179,7 @@ namespace stream
 			void HandlePing (Packet * packet);
 			size_t Send (const uint8_t * buf, size_t len);
 			void AsyncSend (const uint8_t * buf, size_t len, SendHandler handler);
+			void SendPing ();
 
 			template<typename Buffer, typename ReceiveHandler>
 			void AsyncReceive (const Buffer& buffer, ReceiveHandler handler, int timeout = 0);
@@ -260,13 +262,14 @@ namespace stream
 
 			typedef std::function<void (std::shared_ptr<Stream>)> Acceptor;
 
-			StreamingDestination (std::shared_ptr<i2p::client::ClientDestination> owner, uint16_t localPort = 0, bool gzip = true);
+			StreamingDestination (std::shared_ptr<i2p::client::ClientDestination> owner, uint16_t localPort = 0, bool gzip = false);
 			~StreamingDestination ();
 
 			void Start ();
 			void Stop ();
 
 			std::shared_ptr<Stream> CreateNewOutgoingStream (std::shared_ptr<const i2p::data::LeaseSet> remote, int port = 0);
+			void SendPing (std::shared_ptr<const i2p::data::LeaseSet> remote);
 			void DeleteStream (std::shared_ptr<Stream> stream);
 			bool DeleteStream (uint32_t recvStreamID);
 			void SetAcceptor (const Acceptor& acceptor);
@@ -311,7 +314,7 @@ namespace stream
 		public:
 
 			i2p::data::GzipInflator m_Inflator;
-			i2p::data::GzipDeflator m_Deflator;
+			std::unique_ptr<i2p::data::GzipDeflator> m_Deflator;
 
 			// for HTTP only
 			const decltype(m_Streams)& GetStreams () const { return m_Streams; };
@@ -363,7 +366,7 @@ namespace stream
 				handler (boost::asio::error::make_error_code (boost::asio::error::timed_out), received);
 			else
 			{
-				// itermediate iterrupt
+				// itermediate interrupt
 				SendUpdatedLeaseSet (); // send our leaseset if applicable
 				AsyncReceive (buffer, handler, remainingTimeout);
 			}

@@ -53,7 +53,7 @@ namespace transport
 		}
 		catch ( std::exception & ex )
 		{
-			LogPrint (eLogError, "SSU: failed to bind to v4 port ", m_Endpoint.port(), ": ", ex.what());
+			LogPrint (eLogError, "SSU: Failed to bind to v4 port ", m_Endpoint.port(), ": ", ex.what());
 			ThrowFatal ("Unable to start IPv4 SSU transport at port ", m_Endpoint.port(), ": ", ex.what ());
 		}
 	}
@@ -83,7 +83,7 @@ namespace transport
 		}
 		catch ( std::exception & ex )
 		{
-			LogPrint (eLogError, "SSU: failed to bind to v6 port ", m_EndpointV6.port(), ": ", ex.what());
+			LogPrint (eLogError, "SSU: Failed to bind to v6 port ", m_EndpointV6.port(), ": ", ex.what());
 			ThrowFatal ("Unable to start IPv6 SSU transport at port ", m_Endpoint.port(), ": ", ex.what ());
 		}
 	}
@@ -156,7 +156,7 @@ namespace transport
 			}
 			catch (std::exception& ex)
 			{
-				LogPrint (eLogError, "SSU: server runtime exception: ", ex.what ());
+				LogPrint (eLogError, "SSU: Server runtime exception: ", ex.what ());
 			}
 		}
 	}
@@ -173,7 +173,7 @@ namespace transport
 			}
 			catch (std::exception& ex)
 			{
-				LogPrint (eLogError, "SSU: receivers runtime exception: ", ex.what ());
+				LogPrint (eLogError, "SSU: Receivers runtime exception: ", ex.what ());
 				if (m_IsRunning)
 				{
 					// restart socket
@@ -218,7 +218,7 @@ namespace transport
 
 	void SSUServer::AddRelay (uint32_t tag, std::shared_ptr<SSUSession> relay)
 	{
-		m_Relays[tag] = relay;
+		m_Relays.emplace (tag, relay);
 	}
 
 	void SSUServer::RemoveRelay (uint32_t tag)
@@ -249,20 +249,20 @@ namespace transport
 
 		if (ec)
 		{
-			LogPrint (eLogError, "SSU: send exception: ", ec.message (), " while trying to send data to ", to.address (), ":", to.port (), " (length: ", len, ")");
+			LogPrint (eLogError, "SSU: Send exception: ", ec.message (), " while trying to send data to ", to.address (), ":", to.port (), " (length: ", len, ")");
 		}
 	}
 
 	void SSUServer::Receive ()
 	{
-		SSUPacket * packet = new SSUPacket ();
+		SSUPacket * packet = m_PacketsPool.AcquireMt ();
 		m_Socket.async_receive_from (boost::asio::buffer (packet->buf, SSU_MTU_V4), packet->from,
 			std::bind (&SSUServer::HandleReceivedFrom, this, std::placeholders::_1, std::placeholders::_2, packet));
 	}
 
 	void SSUServer::ReceiveV6 ()
 	{
-		SSUPacket * packet = new SSUPacket ();
+		SSUPacket * packet = m_PacketsPool.AcquireMt ();
 		m_SocketV6.async_receive_from (boost::asio::buffer (packet->buf, SSU_MTU_V6), packet->from,
 			std::bind (&SSUServer::HandleReceivedFromV6, this, std::placeholders::_1, std::placeholders::_2, packet));
 	}
@@ -293,7 +293,7 @@ namespace transport
 			{
 				while (moreBytes && packets.size () < 25)
 				{
-					packet = new SSUPacket ();
+					packet = m_PacketsPool.AcquireMt ();
 					packet->len = m_Socket.receive_from (boost::asio::buffer (packet->buf, SSU_MTU_V4), packet->from, 0, ec);
 					if (!ec)
 					{
@@ -304,7 +304,7 @@ namespace transport
 					else
 					{
 						LogPrint (eLogError, "SSU: receive_from error: code ", ec.value(), ": ", ec.message ());
-						delete packet;
+						m_PacketsPool.ReleaseMt (packet);
 						break;
 					}
 				}
@@ -315,10 +315,10 @@ namespace transport
 		}
 		else
 		{
-			delete packet;
+			m_PacketsPool.ReleaseMt (packet);
 			if (ecode != boost::asio::error::operation_aborted)
 			{
-				LogPrint (eLogError, "SSU: receive error: code ", ecode.value(), ": ", ecode.message ());
+				LogPrint (eLogError, "SSU: Receive error: code ", ecode.value(), ": ", ecode.message ());
 				m_Socket.close ();
 				OpenSocket ();
 				Receive ();
@@ -352,7 +352,7 @@ namespace transport
 			{
 				while (moreBytes && packets.size () < 25)
 				{
-					packet = new SSUPacket ();
+					packet = m_PacketsPool.AcquireMt ();
 					packet->len = m_SocketV6.receive_from (boost::asio::buffer (packet->buf, SSU_MTU_V6), packet->from, 0, ec);
 					if (!ec)
 					{
@@ -363,7 +363,7 @@ namespace transport
 					else
 					{
 						LogPrint (eLogError, "SSU: v6 receive_from error: code ", ec.value(), ": ", ec.message ());
-						delete packet;
+						m_PacketsPool.ReleaseMt (packet);;
 						break;
 					}
 				}
@@ -374,7 +374,7 @@ namespace transport
 		}
 		else
 		{
-			delete packet;
+			m_PacketsPool.ReleaseMt (packet);
 			if (ecode != boost::asio::error::operation_aborted)
 			{
 				LogPrint (eLogError, "SSU: v6 receive error: code ", ecode.value(), ": ", ecode.message ());
@@ -409,7 +409,7 @@ namespace transport
 						session = std::make_shared<SSUSession> (*this, packet->from);
 						session->WaitForConnect ();
 						(*sessions)[packet->from] = session;
-						LogPrint (eLogDebug, "SSU: new session from ", packet->from.address ().to_string (), ":", packet->from.port (), " created");
+						LogPrint (eLogDebug, "SSU: New session from ", packet->from.address ().to_string (), ":", packet->from.port (), " created");
 					}
 				}
 				if (session)
@@ -421,8 +421,8 @@ namespace transport
 				if (session) session->FlushData ();
 				session = nullptr;
 			}
-			delete packet;
 		}
+		m_PacketsPool.ReleaseMt (packets);
 		if (session) session->FlushData ();
 	}
 
@@ -797,7 +797,7 @@ namespace transport
 				if (sessions.empty () && !introducers.empty ())
 				{
 					// bump creation time for previous introducers if no new sessions found
-					LogPrint (eLogDebug, "SSU: no new introducers found. Trying to reuse existing");
+					LogPrint (eLogDebug, "SSU: No new introducers found. Trying to reuse existing");
 					for (const auto& it : introducers)
 					{
 						auto session = FindSession (it);
@@ -847,7 +847,7 @@ namespace transport
 					}
 					else
 					{
-						LogPrint (eLogDebug, "SSU: can't find more introducers");
+						LogPrint (eLogDebug, "SSU: Can't find more introducers");
 						break;
 					}
 				}
@@ -919,13 +919,19 @@ namespace transport
 			}
 			if (numDeleted > 0)
 				LogPrint (eLogDebug, "SSU: ", numDeleted, " peer tests have been expired");
+			// some cleaups. TODO: use separate timer
+			m_FragmentsPool.CleanUp ();
+			m_IncompleteMessagesPool.CleanUp ();
+			m_SentMessagesPool.CleanUp ();
+
 			SchedulePeerTestsCleanupTimer ();
 		}
 	}
 
 	void SSUServer::ScheduleTermination ()
 	{
-		m_TerminationTimer.expires_from_now (boost::posix_time::seconds(SSU_TERMINATION_CHECK_TIMEOUT));
+		uint64_t timeout = SSU_TERMINATION_CHECK_TIMEOUT + (rand () % SSU_TERMINATION_CHECK_TIMEOUT)/5;
+		m_TerminationTimer.expires_from_now (boost::posix_time::seconds(timeout));
 		m_TerminationTimer.async_wait (std::bind (&SSUServer::HandleTerminationTimer,
 			this, std::placeholders::_1));
 	}
@@ -940,20 +946,23 @@ namespace transport
 				{
 					auto session = it.second;
 					if (it.first != session->GetRemoteEndpoint ())
-						LogPrint (eLogWarning, "SSU: remote endpoint ", session->GetRemoteEndpoint (), " doesn't match key ", it.first, " adjusted");
+						LogPrint (eLogWarning, "SSU: Remote endpoint ", session->GetRemoteEndpoint (), " doesn't match key ", it.first, " adjusted");
 					m_Service.post ([session]
 						{
-							LogPrint (eLogWarning, "SSU: no activity with ", session->GetRemoteEndpoint (), " for ", session->GetTerminationTimeout (), " seconds");
+							LogPrint (eLogWarning, "SSU: No activity with ", session->GetRemoteEndpoint (), " for ", session->GetTerminationTimeout (), " seconds");
 							session->Failed ();
 						});
 				}
+				else
+					it.second->CleanUp (ts);
 			ScheduleTermination ();
 		}
 	}
 
 	void SSUServer::ScheduleTerminationV6 ()
 	{
-		m_TerminationTimerV6.expires_from_now (boost::posix_time::seconds(SSU_TERMINATION_CHECK_TIMEOUT));
+		uint64_t timeout = SSU_TERMINATION_CHECK_TIMEOUT + (rand () % SSU_TERMINATION_CHECK_TIMEOUT)/5;
+		m_TerminationTimerV6.expires_from_now (boost::posix_time::seconds(timeout));
 		m_TerminationTimerV6.async_wait (std::bind (&SSUServer::HandleTerminationTimerV6,
 			this, std::placeholders::_1));
 	}
@@ -968,13 +977,15 @@ namespace transport
 				{
 					auto session = it.second;
 					if (it.first != session->GetRemoteEndpoint ())
-						LogPrint (eLogWarning, "SSU: remote endpoint ", session->GetRemoteEndpoint (), " doesn't match key ", it.first);
+						LogPrint (eLogWarning, "SSU: Remote endpoint ", session->GetRemoteEndpoint (), " doesn't match key ", it.first);
 					m_Service.post ([session]
 						{
-							LogPrint (eLogWarning, "SSU: no activity with ", session->GetRemoteEndpoint (), " for ", session->GetTerminationTimeout (), " seconds");
+							LogPrint (eLogWarning, "SSU: No activity with ", session->GetRemoteEndpoint (), " for ", session->GetTerminationTimeout (), " seconds");
 							session->Failed ();
 						});
 				}
+				else
+					it.second->CleanUp (ts);
 			ScheduleTerminationV6 ();
 		}
 	}

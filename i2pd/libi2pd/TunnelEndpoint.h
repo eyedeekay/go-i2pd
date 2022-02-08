@@ -10,9 +10,9 @@
 #define TUNNEL_ENDPOINT_H__
 
 #include <inttypes.h>
-#include <unordered_map>
 #include <vector>
 #include <string>
+#include <unordered_map>
 #include "I2NPProtocol.h"
 #include "TunnelBase.h"
 
@@ -49,14 +49,14 @@ namespace tunnel
 
 			void HandleFollowOnFragment (uint32_t msgID, bool isLastFragment, uint8_t fragmentNum, const uint8_t * fragment, size_t size);
 			bool ConcatFollowOnFragment (TunnelMessageBlockEx& msg, const uint8_t * fragment, size_t size) const; // true if success
-			void HandleCurrenMessageFollowOnFragment (const uint8_t * frgament, size_t size, bool isLastFragment);		
+			void HandleCurrenMessageFollowOnFragment (const uint8_t * fragment, size_t size, bool isLastFragment);
 			void HandleNextMessage (const TunnelMessageBlock& msg);
 
 			void AddOutOfSequenceFragment (uint32_t msgID, uint8_t fragmentNum, bool isLastFragment, const uint8_t * fragment, size_t size);
 			bool ConcatNextOutOfSequenceFragment (uint32_t msgID, TunnelMessageBlockEx& msg); // true if something added
 			void HandleOutOfSequenceFragments (uint32_t msgID, TunnelMessageBlockEx& msg);
 			void AddIncompleteCurrentMessage ();
-		
+
 		private:
 
 			std::unordered_map<uint32_t, TunnelMessageBlockEx> m_IncompleteMessages;

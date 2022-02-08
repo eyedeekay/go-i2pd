@@ -61,7 +61,7 @@ namespace config {
 			("service", bool_switch()->default_value(false),                  "Router will use system folders like '/var/lib/i2pd' (default: disabled)")
 			("notransit", bool_switch()->default_value(false),                "Router will not accept transit tunnels at startup (default: disabled)")
 			("floodfill", bool_switch()->default_value(false),                "Router will be floodfill (default: disabled)")
-			("bandwidth", value<std::string>()->default_value(""),            "Bandwidth limit: integer in KBps or letters: L (32), O (256), P (2048), X (>9000)")
+			("bandwidth", value<std::string>()->default_value(""),            "Transit traffic bandwidth limit: integer in KBps or letters: L (32), O (256), P (2048), X (>9000)")
 			("share", value<int>()->default_value(100),                       "Limit of transit traffic from max bandwidth in percents. (default: 100)")
 			("ntcp", bool_switch()->default_value(false),                     "Ignored. Always false")
 			("ssu", bool_switch()->default_value(true),                       "Enable SSU transport (default: enabled)")
@@ -210,10 +210,13 @@ namespace config {
 				"https://reseed.onion.im/,"
 				"https://i2pseed.creativecowpat.net:8443/,"
 				"https://reseed.i2pgit.org/,"
-				"https://i2p.novg.net/"
+				"https://i2p.novg.net/,"
+				"https://banana.incognet.io/"
 			),                                                            "Reseed URLs, separated by comma")
 			("reseed.yggurls", value<std::string>()->default_value(
-				"http://[324:9de3:fea4:f6ac::ace]:7070/"
+				"http://[324:71e:281a:9ed3::ace]:7070/,"
+				"http://[301:65b9:c7cd:9a36::1]:18801/,"
+				"http://[320:8936:ec1a:31f1::216]/"
 			),                                                            "Reseed URLs through the Yggdrasil, separated by comma")
 		;
 

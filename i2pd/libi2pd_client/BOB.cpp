@@ -68,7 +68,7 @@ namespace client
 		std::shared_ptr<AddressReceiver> receiver)
 	{
 		if (ecode)
-			LogPrint (eLogError, "BOB: inbound tunnel read error: ", ecode.message ());
+			LogPrint (eLogError, "BOB: Inbound tunnel read error: ", ecode.message ());
 		else
 		{
 			receiver->bufferOffset += bytes_transferred;
@@ -83,7 +83,7 @@ namespace client
 				auto addr = context.GetAddressBook ().GetAddress (receiver->buffer);
 				if (!addr)
 				{
-					LogPrint (eLogError, "BOB: address ", receiver->buffer, " not found");
+					LogPrint (eLogError, "BOB: Address ", receiver->buffer, " not found");
 					return;
 				}
 				if (addr->IsIdentHash ())
@@ -106,7 +106,7 @@ namespace client
 				if (receiver->bufferOffset < BOB_COMMAND_BUFFER_SIZE)
 					ReceiveAddress (receiver);
 				else
-					LogPrint (eLogError, "BOB: missing inbound address");
+					LogPrint (eLogError, "BOB: Missing inbound address");
 			}
 		}
 	}
@@ -268,7 +268,7 @@ namespace client
 	{
 		if(ecode)
 		{
-			LogPrint (eLogError, "BOB: command channel read error: ", ecode.message());
+			LogPrint (eLogError, "BOB: Command channel read error: ", ecode.message());
 			if (ecode != boost::asio::error::operation_aborted)
 				Terminate ();
 		}
@@ -292,7 +292,7 @@ namespace client
 			}
 			else
 			{
-				LogPrint (eLogError, "BOB: unknown command ", command.c_str());
+				LogPrint (eLogError, "BOB: Unknown command ", command.c_str());
 				SendReplyError ("unknown command");
 			}
 		}
@@ -310,7 +310,7 @@ namespace client
 	{
 		if (ecode)
 		{
-			LogPrint (eLogError, "BOB: command channel send error: ", ecode.message ());
+			LogPrint (eLogError, "BOB: Command channel send error: ", ecode.message ());
 			if (ecode != boost::asio::error::operation_aborted)
 				Terminate ();
 		}
@@ -523,7 +523,7 @@ namespace client
 			}
 			catch (std::invalid_argument& ex)
 			{
-				LogPrint (eLogWarning, "BOB: newkeys ", ex.what ());
+				LogPrint (eLogWarning, "BOB: Error on newkeys: ", ex.what ());
 			}
 		}
 
@@ -660,7 +660,7 @@ namespace client
 		else
 			SendReplyError ("Local LeaseSet Not found");
 	}
-		
+
 	void BOBCommandSession::ClearCommandHandler (const char * operand, size_t len)
 	{
 		LogPrint (eLogDebug, "BOB: clear");
@@ -786,7 +786,7 @@ namespace client
 		m_CommandHandlers[BOB_COMMAND_INPORT] = &BOBCommandSession::InportCommandHandler;
 		m_CommandHandlers[BOB_COMMAND_QUIET] = &BOBCommandSession::QuietCommandHandler;
 		m_CommandHandlers[BOB_COMMAND_LOOKUP] = &BOBCommandSession::LookupCommandHandler;
-		m_CommandHandlers[BOB_COMMAND_LOOKUP_LOCAL] = &BOBCommandSession::LookupLocalCommandHandler;	
+		m_CommandHandlers[BOB_COMMAND_LOOKUP_LOCAL] = &BOBCommandSession::LookupLocalCommandHandler;
 		m_CommandHandlers[BOB_COMMAND_CLEAR] = &BOBCommandSession::ClearCommandHandler;
 		m_CommandHandlers[BOB_COMMAND_LIST] = &BOBCommandSession::ListCommandHandler;
 		m_CommandHandlers[BOB_COMMAND_OPTION] = &BOBCommandSession::OptionCommandHandler;
@@ -880,7 +880,7 @@ namespace client
 			session->SendVersion ();
 		}
 		else
-			LogPrint (eLogError, "BOB: accept error: ", ecode.message ());
+			LogPrint (eLogError, "BOB: Accept error: ", ecode.message ());
 	}
 }
 }

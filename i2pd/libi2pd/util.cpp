@@ -117,7 +117,7 @@ namespace util
 			}
 			catch (std::exception& ex)
 			{
-				LogPrint (eLogError, m_Name, ": runtime exception: ", ex.what ());
+				LogPrint (eLogError, m_Name, ": Runtime exception: ", ex.what ());
 			}
 		}
 	}
@@ -129,7 +129,7 @@ namespace util
 		pthread_set_name_np(pthread_self(), name);
 #elif defined(__NetBSD__)
 		pthread_setname_np(pthread_self(), "%s", (void *)name);
-#else
+#elif !defined(__gnu_hurd__)
 		pthread_setname_np(pthread_self(), name);
 #endif
 	}
@@ -176,7 +176,7 @@ namespace net
 
 		if(dwRetVal != NO_ERROR)
 		{
-			LogPrint(eLogError, "NetIface: GetMTU(): enclosed GetAdaptersAddresses() call has failed");
+			LogPrint(eLogError, "NetIface: GetMTU(): Enclosed GetAdaptersAddresses() call has failed");
 			FREE(pAddresses);
 			return fallback;
 		}
@@ -188,7 +188,7 @@ namespace net
 
 			pUnicast = pCurrAddresses->FirstUnicastAddress;
 			if(pUnicast == nullptr)
-				LogPrint(eLogError, "NetIface: GetMTU(): not a unicast ipv4 address, this is not supported");
+				LogPrint(eLogError, "NetIface: GetMTU(): Not a unicast IPv4 address, this is not supported");
 
 			for(int i = 0; pUnicast != nullptr; ++i)
 			{
@@ -205,7 +205,7 @@ namespace net
 			pCurrAddresses = pCurrAddresses->Next;
 		}
 
-		LogPrint(eLogError, "NetIface: GetMTU(): no usable unicast ipv4 addresses found");
+		LogPrint(eLogError, "NetIface: GetMTU(): No usable unicast IPv4 addresses found");
 		FREE(pAddresses);
 		return fallback;
 	}
@@ -230,7 +230,7 @@ namespace net
 
 		if(dwRetVal != NO_ERROR)
 		{
-			LogPrint(eLogError, "NetIface: GetMTU(): enclosed GetAdaptersAddresses() call has failed");
+			LogPrint(eLogError, "NetIface: GetMTU(): Enclosed GetAdaptersAddresses() call has failed");
 			FREE(pAddresses);
 			return fallback;
 		}
@@ -242,7 +242,7 @@ namespace net
 			PIP_ADAPTER_UNICAST_ADDRESS firstUnicastAddress = pCurrAddresses->FirstUnicastAddress;
 			pUnicast = pCurrAddresses->FirstUnicastAddress;
 			if(pUnicast == nullptr)
-				LogPrint(eLogError, "NetIface: GetMTU(): not a unicast ipv6 address, this is not supported");
+				LogPrint(eLogError, "NetIface: GetMTU(): Not a unicast IPv6 address, this is not supported");
 
 			for(int i = 0; pUnicast != nullptr; ++i)
 			{
@@ -270,7 +270,7 @@ namespace net
 			pCurrAddresses = pCurrAddresses->Next;
 		}
 
-		LogPrint(eLogError, "NetIface: GetMTU(): no usable unicast ipv6 addresses found");
+		LogPrint(eLogError, "NetIface: GetMTU(): No usable unicast IPv6 addresses found");
 		FREE(pAddresses);
 		return fallback;
 	}
@@ -302,7 +302,7 @@ namespace net
 		}
 		else
 		{
-			LogPrint(eLogError, "NetIface: GetMTU(): address family is not supported");
+			LogPrint(eLogError, "NetIface: GetMTU(): Address family is not supported");
 			return fallback;
 		}
 	}
@@ -344,7 +344,7 @@ namespace net
 			if(fd > 0)
 			{
 				ifreq ifr;
-				strncpy(ifr.ifr_name, ifa->ifa_name, IFNAMSIZ); // set interface for query
+				strncpy(ifr.ifr_name, ifa->ifa_name, IFNAMSIZ-1); // set interface for query
 				if(ioctl(fd, SIOCGIFMTU, &ifr) >= 0)
 					mtu = ifr.ifr_mtu; // MTU
 				else
@@ -355,7 +355,7 @@ namespace net
 				LogPrint(eLogError, "NetIface: Failed to create datagram socket");
 		}
 		else
-			LogPrint(eLogWarning, "NetIface: interface for local address", localAddress.to_string(), " not found");
+			LogPrint(eLogWarning, "NetIface: Interface for local address", localAddress.to_string(), " not found");
 		freeifaddrs(ifaddr);
 
 		return mtu;
@@ -377,7 +377,7 @@ namespace net
 	const boost::asio::ip::address GetInterfaceAddress (const std::string & ifname, bool ipv6)
 	{
 #ifdef _WIN32
-		LogPrint(eLogError, "NetIface: cannot get address by interface name, not implemented on WIN32");
+		LogPrint(eLogError, "NetIface: Cannot get address by interface name, not implemented on WIN32");
 		if(ipv6)
 			return boost::asio::ip::address::from_string("::1");
 		else
@@ -413,10 +413,10 @@ namespace net
 		if(ipv6)
 		{
 			fallback = "::1";
-			LogPrint(eLogWarning, "NetIface: cannot find ipv6 address for interface ", ifname);
+			LogPrint(eLogWarning, "NetIface: Cannot find IPv6 address for interface ", ifname);
 		} else {
 			fallback = "127.0.0.1";
-			LogPrint(eLogWarning, "NetIface: cannot find ipv4 address for interface ", ifname);
+			LogPrint(eLogWarning, "NetIface: Cannot find IPv4 address for interface ", ifname);
 		}
 		return boost::asio::ip::address::from_string(fallback);
 #endif
@@ -425,14 +425,14 @@ namespace net
 	static bool IsYggdrasilAddress (const uint8_t addr[16])
 	{
 		return addr[0] == 0x02 || addr[0] == 0x03;
-	}	
+	}
 
 	bool IsYggdrasilAddress (const boost::asio::ip::address& addr)
 	{
 		if (!addr.is_v6 ()) return false;
 		return IsYggdrasilAddress (addr.to_v6 ().to_bytes ().data ());
-	}	
-	
+	}
+
 	boost::asio::ip::address_v6 GetYggdrasilAddress ()
 	{
 #if defined(_WIN32)
@@ -479,7 +479,7 @@ namespace net
 			}
 			pCurrAddresses = pCurrAddresses->Next;
 		}
-		LogPrint(eLogWarning, "NetIface: interface with yggdrasil network address not found");
+		LogPrint(eLogWarning, "NetIface: Interface with Yggdrasil network address not found");
 		FREE(pAddresses);
 		return boost::asio::ip::address_v6 ();
 #else
@@ -504,7 +504,7 @@ namespace net
 				cur = cur->ifa_next;
 			}
 		}
-		LogPrint(eLogWarning, "NetIface: interface with yggdrasil network address not found");
+		LogPrint(eLogWarning, "NetIface: Interface with Yggdrasil network address not found");
 		if(addrs) freeifaddrs(addrs);
 		return boost::asio::ip::address_v6 ();
 #endif
@@ -517,11 +517,11 @@ namespace net
 		GetMTUWindows(addr, 0);
 #else
 		GetMTUUnix(addr, 0);
-#endif	
+#endif
 		return mtu > 0;
-	}	
-	
-	bool IsInReservedRange (const boost::asio::ip::address& host) 
+	}
+
+	bool IsInReservedRange (const boost::asio::ip::address& host)
 	{
 		// https://en.wikipedia.org/wiki/Reserved_IP_addresses
 		if (host.is_unspecified ()) return false;
@@ -555,7 +555,10 @@ namespace net
 			static const std::vector< std::pair<boost::asio::ip::address_v6::bytes_type, boost::asio::ip::address_v6::bytes_type> > reservedIPv6Ranges {
 				address_pair_v6("2001:db8::", "2001:db8:ffff:ffff:ffff:ffff:ffff:ffff"),
 				address_pair_v6("fc00::",     "fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"),
-				address_pair_v6("fe80::",     "febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff")
+				address_pair_v6("fe80::",     "febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff"),
+				address_pair_v6("ff00::",     "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"),
+				address_pair_v6("::",         "::"),
+				address_pair_v6("::1",        "::1")
 			};
 
 			boost::asio::ip::address_v6::bytes_type ipv6_address = host.to_v6 ().to_bytes ();

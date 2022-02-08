@@ -3,7 +3,7 @@
 #export GO111MODULE=off
 
 i2pd_prerelease_version=c-wrapper-libi2pd-api
-i2pd_release_version=2.38.0
+i2pd_release_version=2.40.0
 
 export GOPATH=$(HOME)/go
 
@@ -54,7 +54,7 @@ i2pd/i2pd: i2pd
 	cd i2pd && make
 
 i2pd: 
-	git clone git@github.com:eyedeekay/i2pd -b $(i2pd_prerelease_version) i2pd
+	git clone git@github.com:PurpleI2P/i2pd --branch $(i2pd_release_version) --single-branch i2pd
 
 clean:
 	rm -rf go-i2pd i2pd

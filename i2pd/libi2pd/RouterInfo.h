@@ -13,7 +13,6 @@
 #include <string>
 #include <map>
 #include <vector>
-#include <list>
 #include <iostream>
 #include <boost/asio.hpp>
 #include <boost/shared_ptr.hpp>
@@ -53,7 +52,7 @@ namespace data
 	const uint8_t COST_NTCP2_NON_PUBLISHED = 14;
 	const uint8_t COST_SSU_DIRECT = 9;
 	const uint8_t COST_SSU_THROUGH_INTRODUCERS = 11;
-	
+
 	const int MAX_RI_BUFFER_SIZE = 2048; // if RouterInfo exceeds 2048 we consider it as malformed, might be changed later
 	class RouterInfo: public RoutingDestination
 	{
@@ -65,8 +64,10 @@ namespace data
 				eNTCP2V6 = 0x02,
 				eSSUV4 = 0x04,
 				eSSUV6 = 0x08,
-				eNTCP2V6Mesh = 0x10	
+				eNTCP2V6Mesh = 0x10,
+				eAllTransports = 0xFF
 			};
+			typedef uint8_t CompatibleTransports;
 
 			enum Caps
 			{
@@ -85,7 +86,7 @@ namespace data
 				eSSUTesting = 0x04,
 				eSSUIntroducer = 0x08
 			};
-		
+
 			enum TransportStyle
 			{
 				eTransportUnknown = 0,
@@ -149,14 +150,14 @@ namespace data
 				bool IsPublishedNTCP2 () const { return IsNTCP2 () && published; };
 				bool IsReachableSSU () const { return (bool)ssu && (published || !ssu->introducers.empty ()); };
 				bool UsesIntroducer () const { return  (bool)ssu && !ssu->introducers.empty (); };
-				
+
 				bool IsIntroducer () const { return caps & eSSUIntroducer; };
 				bool IsPeerTesting () const { return caps & eSSUTesting; };
 
 				bool IsV4 () const { return (caps & AddressCaps::eV4) || (host.is_v4 () && !host.is_unspecified ()); };
 				bool IsV6 () const { return (caps & AddressCaps::eV6) || (host.is_v6 () && !host.is_unspecified ()); };
 			};
-			typedef std::list<std::shared_ptr<Address> > Addresses;
+			typedef std::vector<std::shared_ptr<Address> > Addresses;
 
 			RouterInfo ();
 			RouterInfo (const std::string& fullPath);
@@ -172,14 +173,14 @@ namespace data
 			int GetVersion () const { return m_Version; };
 			Addresses& GetAddresses () { return *m_Addresses; }; // should be called for local RI only, otherwise must return shared_ptr
 			std::shared_ptr<const Address> GetNTCP2AddressWithStaticKey (const uint8_t * key) const;
-			std::shared_ptr<const Address> GetPublishedNTCP2V4Address () const; 
-			std::shared_ptr<const Address> GetPublishedNTCP2V6Address () const; 
+			std::shared_ptr<const Address> GetPublishedNTCP2V4Address () const;
+			std::shared_ptr<const Address> GetPublishedNTCP2V6Address () const;
 			std::shared_ptr<const Address> GetSSUAddress (bool v4only = true) const;
 			std::shared_ptr<const Address> GetSSUV6Address () const;
 			std::shared_ptr<const Address> GetYggdrasilAddress () const;
 
 			void AddSSUAddress (const char * host, int port, const uint8_t * key, int mtu = 0);
-			void AddNTCP2Address (const uint8_t * staticKey, const uint8_t * iv, 
+			void AddNTCP2Address (const uint8_t * staticKey, const uint8_t * iv,
 				const boost::asio::ip::address& host = boost::asio::ip::address(), int port = 0, uint8_t caps = 0);
 			bool AddIntroducer (const Introducer& introducer);
 			bool RemoveIntroducer (const boost::asio::ip::udp::endpoint& e);
@@ -191,30 +192,32 @@ namespace data
 			void UpdateSupportedTransports ();
 			bool IsFloodfill () const { return m_Caps & Caps::eFloodfill; };
 			bool IsReachable () const { return m_Caps & Caps::eReachable; };
+			bool IsECIES () const { return m_RouterIdentity->GetCryptoKeyType () == i2p::data::CRYPTO_KEY_TYPE_ECIES_X25519_AEAD; };
 			bool IsSSU (bool v4only = true) const;
 			bool IsSSUV6 () const;
 			bool IsNTCP2 (bool v4only = true) const;
-			bool IsNTCP2V6 () const;	
+			bool IsNTCP2V6 () const;
 			bool IsV6 () const;
 			bool IsV4 () const;
-			bool IsMesh () const;	
+			bool IsMesh () const;
 			void EnableV6 ();
 			void DisableV6 ();
 			void EnableV4 ();
 			void DisableV4 ();
 			void EnableMesh ();
-			void DisableMesh ();	
-			bool IsCompatible (const RouterInfo& other) const { return m_SupportedTransports & other.m_SupportedTransports; };	
+			void DisableMesh ();
+			bool IsCompatible (const RouterInfo& other) const { return m_SupportedTransports & other.m_SupportedTransports; };
 			bool IsReachableFrom (const RouterInfo& other) const { return m_ReachableTransports & other.m_SupportedTransports; };
-			bool IsReachableBy (SupportedTransports transport) const { return m_ReachableTransports & transport; };
+			bool IsReachableBy (CompatibleTransports transports) const { return m_ReachableTransports & transports; };
+			CompatibleTransports GetCompatibleTransports (bool incoming) const { return incoming ? m_ReachableTransports : m_SupportedTransports; };
 			bool HasValidAddresses () const { return m_SupportedTransports; };
 			bool IsHidden () const { return m_Caps & eHidden; };
 			bool IsHighBandwidth () const { return m_Caps & RouterInfo::eHighBandwidth; };
 			bool IsExtraBandwidth () const { return m_Caps & RouterInfo::eExtraBandwidth; };
 			bool IsEligibleFloodfill () const;
-			bool IsPeerTesting (bool v4) const;	
-			bool IsIntroducer (bool v4) const;	
-		
+			bool IsPeerTesting (bool v4) const;
+			bool IsIntroducer (bool v4) const;
+
 			uint8_t GetCaps () const { return m_Caps; };
 			void SetCaps (uint8_t caps);
 			void SetCaps (const char * caps);
@@ -223,7 +226,7 @@ namespace data
 			bool IsUnreachable () const { return m_IsUnreachable; };
 
 			const uint8_t * GetBuffer () const { return m_Buffer; };
-			const uint8_t * LoadBuffer (); // load if necessary
+			const uint8_t * LoadBuffer (const std::string& fullPath); // load if necessary
 			int GetBufferLen () const { return m_BufferLen; };
 			void CreateBuffer (const PrivateKeys& privateKeys);
 
@@ -243,14 +246,14 @@ namespace data
 
 			// implements RoutingDestination
 			std::shared_ptr<const IdentityEx> GetIdentity () const { return m_RouterIdentity; };
-			void Encrypt (const uint8_t * data, uint8_t * encrypted, BN_CTX * ctx) const;
+			void Encrypt (const uint8_t * data, uint8_t * encrypted) const;
 
 			bool IsDestination () const { return false; };
 
 		private:
 
-			bool LoadFile ();
-			void ReadFromFile ();
+			bool LoadFile (const std::string& fullPath);
+			void ReadFromFile (const std::string& fullPath);
 			void ReadFromStream (std::istream& s);
 			void ReadFromBuffer (bool verifySignature);
 			void WriteToStream (std::ostream& s) const;
@@ -264,7 +267,7 @@ namespace data
 
 		private:
 
-			std::string m_FullPath, m_Family;
+			std::string m_Family;
 			std::shared_ptr<const IdentityEx> m_RouterIdentity;
 			uint8_t * m_Buffer;
 			size_t m_BufferLen;
@@ -272,7 +275,8 @@ namespace data
 			boost::shared_ptr<Addresses> m_Addresses; // TODO: use std::shared_ptr and std::atomic_store for gcc >= 4.9
 			std::map<std::string, std::string> m_Properties;
 			bool m_IsUpdated, m_IsUnreachable;
-			uint8_t m_SupportedTransports, m_ReachableTransports, m_Caps;
+			CompatibleTransports m_SupportedTransports, m_ReachableTransports;
+			uint8_t m_Caps;
 			int m_Version;
 			mutable std::shared_ptr<RouterProfile> m_Profile;
 	};

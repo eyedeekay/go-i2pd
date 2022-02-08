@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2013-2020, The PurpleI2P Project
+* Copyright (c) 2013-2021, The PurpleI2P Project
 *
 * This file is part of Purple i2pd project and licensed under BSD3
 *
@@ -18,6 +18,7 @@
 #include <mutex>
 #include <boost/asio.hpp>
 #include "Crypto.h"
+#include "util.h"
 #include "I2PEndian.h"
 #include "Identity.h"
 #include "RouterInfo.h"
@@ -63,16 +64,20 @@ namespace transport
 			void DeleteAllSessions ();
 
 			boost::asio::io_service& GetService () { return m_Service; };
+			i2p::util::MemoryPool<Fragment>& GetFragmentsPool () { return m_FragmentsPool; };
+			i2p::util::MemoryPool<IncompleteMessage>& GetIncompleteMessagesPool () { return m_IncompleteMessagesPool; };
+			i2p::util::MemoryPool<SentMessage>& GetSentMessagesPool () { return m_SentMessagesPool; };
+
 			uint16_t GetPort () const { return m_Endpoint.port (); };
 			void SetLocalAddress (const boost::asio::ip::address& localAddress);
-			
+
 			void Send (const uint8_t * buf, size_t len, const boost::asio::ip::udp::endpoint& to);
 			void AddRelay (uint32_t tag, std::shared_ptr<SSUSession> relay);
 			void RemoveRelay (uint32_t tag);
 			std::shared_ptr<SSUSession> FindRelaySession (uint32_t tag);
 			void RescheduleIntroducersUpdateTimer ();
 			void RescheduleIntroducersUpdateTimerV6 ();
-			
+
 			void NewPeerTest (uint32_t nonce, PeerTestParticipant role, std::shared_ptr<SSUSession> session = nullptr);
 			PeerTestParticipant GetPeerTestParticipant (uint32_t nonce);
 			std::shared_ptr<SSUSession> GetPeerTestSession (uint32_t nonce);
@@ -93,7 +98,7 @@ namespace transport
 			void HandleReceivedPackets (std::vector<SSUPacket *> packets,
 				std::map<boost::asio::ip::udp::endpoint, std::shared_ptr<SSUSession> >* sessions);
 
-			void CreateSessionThroughIntroducer (std::shared_ptr<const i2p::data::RouterInfo> router, 
+			void CreateSessionThroughIntroducer (std::shared_ptr<const i2p::data::RouterInfo> router,
 				std::shared_ptr<const i2p::data::RouterInfo::Address> address, bool peerTest = false);
 			template<typename Filter>
 			std::shared_ptr<SSUSession> GetRandomV4Session (Filter filter);
@@ -129,12 +134,17 @@ namespace transport
 			boost::asio::io_service::work m_Work, m_ReceiversWork, m_ReceiversWorkV6;
 			boost::asio::ip::udp::endpoint m_Endpoint, m_EndpointV6;
 			boost::asio::ip::udp::socket m_Socket, m_SocketV6;
-			boost::asio::deadline_timer m_IntroducersUpdateTimer, m_IntroducersUpdateTimerV6, 
+			boost::asio::deadline_timer m_IntroducersUpdateTimer, m_IntroducersUpdateTimerV6,
 				m_PeerTestsCleanupTimer, m_TerminationTimer, m_TerminationTimerV6;
 			std::list<boost::asio::ip::udp::endpoint> m_Introducers, m_IntroducersV6; // introducers we are connected to
 			std::map<boost::asio::ip::udp::endpoint, std::shared_ptr<SSUSession> > m_Sessions, m_SessionsV6;
 			std::map<uint32_t, std::shared_ptr<SSUSession> > m_Relays; // we are introducer
 			std::map<uint32_t, PeerTest> m_PeerTests; // nonce -> creation time in milliseconds
+
+			i2p::util::MemoryPool<Fragment> m_FragmentsPool;
+			i2p::util::MemoryPool<IncompleteMessage> m_IncompleteMessagesPool;
+			i2p::util::MemoryPool<SentMessage> m_SentMessagesPool;
+			i2p::util::MemoryPoolMt<SSUPacket> m_PacketsPool;
 
 		public:
 			// for HTTP only

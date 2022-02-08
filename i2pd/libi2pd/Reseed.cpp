@@ -60,19 +60,19 @@ namespace data
 				num = ProcessSU3File (su3FileName.c_str ());
 			}
 			if (num == 0)
-				LogPrint (eLogWarning, "Reseed: failed to reseed from ", su3FileName);
+				LogPrint (eLogWarning, "Reseed: Failed to reseed from ", su3FileName);
 		}
 		else if (zipFileName.length() > 0) // bootstrap from ZIP file
 		{
 			int num = ProcessZIPFile (zipFileName.c_str ());
 			if (num == 0)
-				LogPrint (eLogWarning, "Reseed: failed to reseed from ", zipFileName);
+				LogPrint (eLogWarning, "Reseed: Failed to reseed from ", zipFileName);
 		}
 		else // bootstrap from reseed servers
 		{
 			int num = ReseedFromServers ();
 			if (num == 0)
-				LogPrint (eLogWarning, "Reseed: failed to reseed from servers");
+				LogPrint (eLogWarning, "Reseed: Failed to reseed from servers");
 		}
 	}
 
@@ -84,23 +84,23 @@ namespace data
 	{
 		bool ipv6;	i2p::config::GetOption("ipv6", ipv6);
 		bool ipv4;	i2p::config::GetOption("ipv4", ipv4);
-		
+
 		std::vector<std::string> httpsReseedHostList;
 		if (ipv4 || ipv6)
-		{	
+		{
 			std::string reseedURLs; i2p::config::GetOption("reseed.urls", reseedURLs);
 			if (!reseedURLs.empty ())
 				boost::split(httpsReseedHostList, reseedURLs, boost::is_any_of(","), boost::token_compress_on);
 		}
-			
+
 		std::vector<std::string> yggReseedHostList;
 		if (!i2p::util::net::GetYggdrasilAddress ().is_unspecified ())
 		{
-			LogPrint (eLogInfo, "Reseed: yggdrasil is supported");
+			LogPrint (eLogInfo, "Reseed: Yggdrasil is supported");
 			std::string yggReseedURLs; i2p::config::GetOption("reseed.yggurls", yggReseedURLs);
 			if (!yggReseedURLs.empty ())
 				boost::split(yggReseedHostList, yggReseedURLs, boost::is_any_of(","), boost::token_compress_on);
-		}	
+		}
 
 		if (httpsReseedHostList.empty () && yggReseedHostList.empty())
 		{
@@ -113,14 +113,14 @@ namespace data
 		{
 			auto ind = rand () % (httpsReseedHostList.size () + yggReseedHostList.size ());
 			bool isHttps = ind < httpsReseedHostList.size ();
-			std::string reseedUrl = isHttps ? httpsReseedHostList[ind] : 
+			std::string reseedUrl = isHttps ? httpsReseedHostList[ind] :
 				yggReseedHostList[ind - httpsReseedHostList.size ()];
 			reseedUrl += "i2pseeds.su3";
 			auto num = ReseedFromSU3Url (reseedUrl, isHttps);
 			if (num > 0) return num; // success
 			reseedRetries++;
 		}
-		LogPrint (eLogWarning, "Reseed: failed to reseed from servers after 10 attempts");
+		LogPrint (eLogWarning, "Reseed: Failed to reseed from servers after 10 attempts");
 		return 0;
 	}
 
@@ -414,13 +414,13 @@ namespace data
 				{
 					if (r && ts > r->GetTimestamp () + 10*i2p::data::NETDB_MAX_EXPIRATION_TIMEOUT*1000LL) // 270 hours
 					{
-						LogPrint (eLogError, "Reseed: router ", r->GetIdentHash().ToBase64 (), " is outdated by ", (ts - r->GetTimestamp ())/1000LL/3600LL, " hours");
+						LogPrint (eLogError, "Reseed: Router ", r->GetIdentHash().ToBase64 (), " is outdated by ", (ts - r->GetTimestamp ())/1000LL/3600LL, " hours");
 						numOutdated++;
 					}
 				});
 			if (numOutdated > numFiles/2) // more than half
 			{
-				LogPrint (eLogError, "Reseed: mammoth's shit\n"
+				LogPrint (eLogError, "Reseed: Mammoth's shit\n"
 				"	   *_____*\n"
 				"	  *_*****_*\n"
 				"	 *_(O)_(O)_*\n"
@@ -478,7 +478,7 @@ namespace data
 					if (terminator) terminator[0] = 0;
 				}
 				// extract RSA key (we need n only, e = 65537)
-				RSA * key = EVP_PKEY_get0_RSA (X509_get_pubkey (cert));
+				const RSA * key = EVP_PKEY_get0_RSA (X509_get_pubkey (cert));
 				const BIGNUM * n, * e, * d;
 				RSA_get0_key(key, &n, &e, &d);
 				PublicKey value;
@@ -509,7 +509,7 @@ namespace data
 
 		for (const std::string & file : files) {
 			if (file.compare(file.size() - 4, 4, ".crt") != 0) {
-				LogPrint(eLogWarning, "Reseed: ignoring file ", file);
+				LogPrint(eLogWarning, "Reseed: Ignoring file ", file);
 				continue;
 			}
 			LoadCertificate (file);
@@ -533,17 +533,17 @@ namespace data
 				}
 				// check for valid proxy url schema
 				if (proxyUrl.schema != "http" && proxyUrl.schema != "socks") {
-					LogPrint(eLogError, "Reseed: bad proxy url: ", proxy);
+					LogPrint(eLogError, "Reseed: Bad proxy url: ", proxy);
 					return "";
 				}
 			} else {
-				LogPrint(eLogError, "Reseed: bad proxy url: ", proxy);
+				LogPrint(eLogError, "Reseed: Bad proxy url: ", proxy);
 				return "";
 			}
 		}
 		i2p::http::URL url;
 		if (!url.parse(address)) {
-			LogPrint(eLogError, "Reseed: failed to parse url: ", address);
+			LogPrint(eLogError, "Reseed: Failed to parse url: ", address);
 			return "";
 		}
 		url.schema = "https";
@@ -680,30 +680,30 @@ namespace data
 			auto it = boost::asio::ip::tcp::resolver(service).resolve (
 				boost::asio::ip::tcp::resolver::query (url.host, std::to_string(url.port)), ecode);
 			if (!ecode)
-			{	
+			{
 				bool connected = false;
 				boost::asio::ip::tcp::resolver::iterator end;
 				while (it != end)
-				{	
+				{
 					boost::asio::ip::tcp::endpoint ep = *it;
 					if ((ep.address ().is_v4 () && i2p::context.SupportsV4 ()) ||
 					    (ep.address ().is_v6 () && i2p::context.SupportsV6 ()))
-					{	
+					{
 						s.lowest_layer().connect (ep, ecode);
 						if (!ecode)
 						{
 							connected = true;
 							break;
-						}	
-					}	
+						}
+					}
 					it++;
 				}
 				if (!connected)
 				{
 					LogPrint(eLogError, "Reseed: Failed to connect to ", url.host);
 					return "";
-				}	
-			}	
+				}
+			}
 		}
 		if (!ecode)
 		{
@@ -743,55 +743,55 @@ namespace data
 		i2p::http::HTTPRes res;
 		int len = res.parse(data);
 		if (len <= 0) {
-			LogPrint(eLogWarning, "Reseed: incomplete/broken response from ", uri);
+			LogPrint(eLogWarning, "Reseed: Incomplete/broken response from ", uri);
 			return "";
 		}
 		if (res.code != 200) {
-			LogPrint(eLogError, "Reseed: failed to reseed from ", uri, ", http code ", res.code);
+			LogPrint(eLogError, "Reseed: Failed to reseed from ", uri, ", http code ", res.code);
 			return "";
 		}
 		data.erase(0, len); /* drop http headers from response */
-		LogPrint(eLogDebug, "Reseed: got ", data.length(), " bytes of data from ", uri);
+		LogPrint(eLogDebug, "Reseed: Got ", data.length(), " bytes of data from ", uri);
 		if (res.is_chunked()) {
 			std::stringstream in(data), out;
 			if (!i2p::http::MergeChunkedResponse(in, out)) {
-				LogPrint(eLogWarning, "Reseed: failed to merge chunked response from ", uri);
+				LogPrint(eLogWarning, "Reseed: Failed to merge chunked response from ", uri);
 				return "";
 			}
-			LogPrint(eLogDebug, "Reseed: got ", data.length(), "(", out.tellg(), ") bytes of data from ", uri);
+			LogPrint(eLogDebug, "Reseed: Got ", data.length(), "(", out.tellg(), ") bytes of data from ", uri);
 			data = out.str();
 		}
 		return data;
-	}	
+	}
 
 	std::string Reseeder::YggdrasilRequest (const std::string& address)
 	{
 		i2p::http::URL url;
-		if (!url.parse(address)) 
+		if (!url.parse(address))
 		{
-			LogPrint(eLogError, "Reseed: failed to parse url: ", address);
+			LogPrint(eLogError, "Reseed: Failed to parse url: ", address);
 			return "";
 		}
 		url.schema = "http";
 		if (!url.port) url.port = 80;
 
 		boost::system::error_code ecode;
-		boost::asio::io_service service;		
+		boost::asio::io_service service;
 		boost::asio::ip::tcp::socket s(service, boost::asio::ip::tcp::v6());
 
 		if (url.host.length () < 2) return ""; // assume []
 		auto host = url.host.substr (1, url.host.length () - 2);
-		LogPrint (eLogDebug, "Reseed: Connecting to yggdrasil ", url.host, ":", url.port);
+		LogPrint (eLogDebug, "Reseed: Connecting to Yggdrasil ", url.host, ":", url.port);
 		s.connect (boost::asio::ip::tcp::endpoint (boost::asio::ip::address_v6::from_string (host), url.port), ecode);
 		if (!ecode)
 		{
-			LogPrint (eLogDebug, "Reseed: Connected to yggdrasil ", url.host, ":", url.port);
+			LogPrint (eLogDebug, "Reseed: Connected to Yggdrasil ", url.host, ":", url.port);
 			return ReseedRequest (s, url.to_string());
 		}
 		else
-			LogPrint (eLogError, "Reseed: Couldn't connect to yggdrasil ", url.host, ": ", ecode.message ());	
-		
+			LogPrint (eLogError, "Reseed: Couldn't connect to Yggdrasil ", url.host, ": ", ecode.message ());
+
 		return "";
-	}	
+	}
 }
 }
