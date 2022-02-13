@@ -1,9 +1,6 @@
 package main
 
 import (
-	//"flag"
-	//"log"
-
 	"time"
 
 	i2pd "github.com/eyedeekay/go-i2pd/goi2pd"
