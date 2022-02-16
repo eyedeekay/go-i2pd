@@ -32,7 +32,9 @@ CGO_CXXFLAGS=-static
 export CGO_CXXFLAGS=-static
 CGO_CPPFLAGS=-static
 export CGO_CPPFLAGS=-static
-FLAGS= /usr/lib/x86_64-linux-gnu/libboost_system.a /usr/lib/x86_64-linux-gnu/libboost_date_time.a /usr/lib/x86_64-linux-gnu/libboost_filesystem.a /usr/lib/x86_64-linux-gnu/libboost_program_options.a /usr/lib/x86_64-linux-gnu/libssl.a /usr/lib/x86_64-linux-gnu/libcrypto.a /usr/lib/x86_64-linux-gnu/libz.a
+LINUXFLAGS=$(which hdiutil || echo /usr/lib/x86_64-linux-gnu/libboost_system.a /usr/lib/x86_64-linux-gnu/libboost_date_time.a /usr/lib/x86_64-linux-gnu/libboost_filesystem.a /usr/lib/x86_64-linux-gnu/libboost_program_options.a /usr/lib/x86_64-linux-gnu/libssl.a /usr/lib/x86_64-linux-gnu/libcrypto.a /usr/lib/x86_64-linux-gnu/libz.a)
+OSXFLAGS=$(which hdiutil && echo /usr/local/opt/boost/lib/libboost_system.a /usr/local/opt/boost/lib/libboost_date_time.a /usr/local/opt/boost/lib/libboost_filesystem.a /usr/local/opt/boost/lib/libboost_program_options.a /usr/local/opt/openssl@1.1/lib/libssl.a /usr/local/opt/openssl@1.1/lib/libcrypto.a)
+FLAGS="$(OSXFLAGS) $(LINUXFLAGS)"
 ```
 
 Then, clone the git repository into your project root:
