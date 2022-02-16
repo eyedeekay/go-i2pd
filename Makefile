@@ -69,7 +69,7 @@ i2pd/i2pd: i2pd
 	cd i2pd && make
 
 i2pd: 
-	git clone git@github.com:PurpleI2P/i2pd --branch $(i2pd_release_version) --single-branch i2pd
+	git clone https://github.com/PurpleI2P/i2pd --branch $(i2pd_release_version) --single-branch i2pd
 
 wrapper: i2pd/i2pd
 	cd i2pd && make libi2pdwrapper.a
