@@ -50,7 +50,7 @@ echo:
 go-i2pd:
 	git clone https://github.com/eyedeekay/go-i2pd go-i2pd
 
-example: fmt go-i2pd
+example: fmt lib wrapper
 	go build -x -v --tags=netgo \
 		-ldflags '-w -linkmode=external -extldflags "-static -ldl $(FLAGS)"' 2>&1 | tee -a make.log
 
