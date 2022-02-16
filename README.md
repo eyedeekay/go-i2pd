@@ -8,6 +8,15 @@ required to generate the static libraries for libi2pd and connect them
 to the Go wrappers, as well as an API for embedding i2pd in Go
 applications.
 
+Slight alterations to this procedure may be required to account for
+differences between applications. This is not intended to be a an app
+for general use but a demonstration of how to set up an i2pd router
+embedded in a Go application.
+
+Cross compilation from Linux to Windows will be supported through [MXE](https://mxe.cc/#tutorial)
+for now. Static resources may be included in the future if there is a
+clear way to keep them up to date obviating the need for MXE.
+
 Using this repository:
 ----------------------
 
